@@ -2,7 +2,7 @@
 name     = "Reload Scripts"
 author   = "XertroV"
 category = "Developer"
-version  = "0.1.1"
+version  = "0.1.2"
 siteid = 470
 
 [script]
