@@ -26,8 +26,11 @@ void RefreshLocalScriptFiles() {
     if (g_DoExtra) trace("DOING EXTRA");
     try {
         auto userFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("Scripts"));
+        auto titlesFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("WorkTitles"));
         Fids::UpdateTree(userFolder);
+        Fids::UpdateTree(titlesFolder);
         RefreshLocalScriptFolder(userFolder);
+        RefreshLocalScriptFolder(titlesFolder);
         NotifySuccess("Refreshed " + countFiles + " scripts while traversing " + countFolders + " folders.");
     } catch {
         NotifyError("Exception! " + getExceptionInfo());
