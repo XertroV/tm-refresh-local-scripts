@@ -3,6 +3,7 @@ name     = "Reload Scripts"
 author   = "XertroV"
 category = "Developer"
 version  = "0.1.1"
+siteid = 470
 
 [script]
 #__DEFINES__
