@@ -125,17 +125,6 @@ bool ShouldIgnoreFolder(const string &in folderPath) {
             trace("Filtered out folder by exact pattern: " + pattern);
             return true;
         }
-        
-        if (pattern.EndsWith("/*")) {
-            string basePath = pattern.SubStr(0, pattern.Length - 2);
-            if (normalizedPath.Contains("/" + basePath + "/")) {
-                string pathAfterBase = normalizedPath.SubStr(normalizedPath.IndexOf("/" + basePath + "/") + basePath.Length + 2);
-                if (pathAfterBase.IndexOf("/") < 0 || pathAfterBase.EndsWith("/")) {
-                    trace("Filtered out folder by wildcard pattern: " + pattern);
-                    return true;
-                }
-            }
-        }
     }
     return false;
 }
