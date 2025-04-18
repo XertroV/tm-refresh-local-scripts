@@ -51,6 +51,8 @@ void LoadIgnorePatternsAndRefresh() {
         return;
     }
     
+    Fids::UpdateTree(titleFolder);
+    
     trace("Title folder path: " + titleFolder.FullDirName);
     
     g_RefreshIgnorePatterns.RemoveRange(0, g_RefreshIgnorePatterns.Length);
@@ -96,10 +98,10 @@ void RefreshLocalScriptFiles() {
         auto userFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("Scripts"));
         auto titlesFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("WorkTitles"));
         
-        if (!g_DoTitle) {
+        //if (!g_DoTitle) {
             Fids::UpdateTree(userFolder);
             RefreshLocalScriptFolder(userFolder);
-        }
+        //}
         
         Fids::UpdateTree(titlesFolder);
         RefreshLocalScriptFolder(titlesFolder);
