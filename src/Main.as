@@ -98,10 +98,10 @@ void RefreshLocalScriptFiles() {
         auto userFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("Scripts"));
         auto titlesFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("WorkTitles"));
         
-        //if (!g_DoTitle) {
+        if (!g_DoTitle) {
             Fids::UpdateTree(userFolder);
             RefreshLocalScriptFolder(userFolder);
-        //}
+        }
         
         Fids::UpdateTree(titlesFolder);
         RefreshLocalScriptFolder(titlesFolder);
