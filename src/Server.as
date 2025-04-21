@@ -109,11 +109,9 @@ void HandleClient(ref@ userdata) {
                 string command = json["command"];
                 if (command == "refresh") {
                     if(commandProcessed) {
-                        SendClientError("Refresh command already processed.");
                         continue;
                     }
                     commandProcessed = true;
-                    trace("Received refresh command from client.");
                     g_DoExtra = bool(json["extra"]);
                     g_DoFilter = bool(json["filter"]);
                     g_DoTitle = bool(json["title"]);
@@ -169,5 +167,4 @@ void _Unload() {
         g_socket.Close();
         @g_socket = null;
     }
-    trace("Socket server unloaded.");
 }
