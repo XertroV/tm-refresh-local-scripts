@@ -141,13 +141,12 @@ void HandleClient(ref@ userdata) {
             }
         }
     }
-    trace("Client handler loop finished.");
     g_ClientConnected = false;
     if (g_activeClient is client) {
          @g_activeClient = null;
     }
     client.Close();
-    trace("Client disconnected. g_ClientConnected = false.");
+    trace("Client disconnected");
 }
 
 void OnDestroyed() {
