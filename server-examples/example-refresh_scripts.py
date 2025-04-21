@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+import socket
+import json
+import struct
+import argparse
+import sys
+
+PORT = 30005
+GREEN = '\033[92m'
+RED = '\033[91m'
+YELLOW = '\033[93m'
+GREY = '\033[90m'
+RESET = '\033[0m'
+
+def process_message(msg):
+    status = msg.get("status")
+    message = msg.get("message", "")
+
+    if status == "log":
+        prefix = f"{GREY}[LOG]{RESET}"
+        if message.startswith("WARN:"):
+             prefix = f"{YELLOW}[WRN]{RESET}"
+             message = message[5:].lstrip()
+        elif message.startswith("OK:"):
+             prefix = f"{GREEN}[ OK]{RESET}"
+             message = message[3:].lstrip()
+        elif message.startswith("Refreshing scripts in"):
+             prefix = f"{GREY}[DIR]{RESET}"
+             message = message[22:].lstrip()
+        elif message.startswith("Refreshing script:"):
+             prefix = f"{GREY}[FIL]{RESET}"
+             message = message[18:].lstrip()
+
+        print(f" {prefix} {message}")
+    elif status == "error":
+        print(f" {RED}[ERR]{RESET} {message}", file=sys.stderr)
+    elif status == "success":
+        files = msg.get('files', 'N/A')
+        folders = msg.get('folders', 'N/A')
+        print(f" {GREEN}[SUCCESS]{RESET} {message} (Files: {files}, Folders: {folders})")
+    else:
+        print(f" {YELLOW}[???]{RESET} Unknown message status '{status}': {msg}")
+
+
+def send_refresh_command(extra=False, filter=False, title=False):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(60.0)
+    operation_completed_successfully = False
+    try:
+        print(f"{GREY}Connecting to localhost:{PORT}...{RESET}")
+        sock.connect(("localhost", PORT))
+        print(f"{GREEN}Connected.{RESET}")
+
+        command = {"command": "refresh", "extra": extra, "filter": filter, "title": title}
+        command_bytes = json.dumps(command).encode('utf-8')
+        sock.sendall(command_bytes)
+        print(f"{GREY}Command sent: {command}{RESET}")
+        print("--- Refresh Log ---")
+
+        while True:
+            hdr_bytes = sock.recv(4)
+            if not hdr_bytes: break
+            if len(hdr_bytes) < 4:
+                print(f"{RED}[ERR]{RESET} Incomplete length header ({len(hdr_bytes)} bytes).", file=sys.stderr)
+                break
+            try:
+                (data_length,) = struct.unpack("<I", hdr_bytes)
+            except struct.error as e:
+                print(f"{RED}[ERR]{RESET} Could not unpack length header: {e}", file=sys.stderr)
+                break
+
+            data_bytes = b""
+            try:
+                while len(data_bytes) < data_length:
+                    chunk = sock.recv(min(4096, data_length - len(data_bytes)))
+                    if not chunk:
+                        raise ConnectionAbortedError("Connection closed unexpectedly while reading data")
+                    data_bytes += chunk
+            except socket.error as e:
+                 print(f"{RED}[ERR]{RESET} Socket error reading data: {e}", file=sys.stderr)
+                 break
+
+            try:
+                message_str = data_bytes.decode('utf-8')
+                response = json.loads(message_str)
+                process_message(response)
+                if response.get("status") == "success":
+                    operation_completed_successfully = True
+
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                 print(f"{RED}[ERR]{RESET} Failed to decode/parse message: {e}", file=sys.stderr)
+                 print(f"{GREY} Raw data: {data_bytes!r}{RESET}", file=sys.stderr)
+                 break
+            except Exception as e:
+                 print(f"{RED}[ERR]{RESET} Error processing message: {e}", file=sys.stderr)
+                 break
+
+    except socket.timeout:
+        print(f"{RED}[ERR]{RESET} Socket timed out.", file=sys.stderr)
+    except ConnectionRefusedError:
+         print(f"{RED}[ERR]{RESET} Connection refused. Is the Openplanet script running?", file=sys.stderr)
+    except socket.error as e:
+        print(f"{RED}[ERR]{RESET} Socket Error: {e}", file=sys.stderr)
+    except Exception as e:
+        print(f"{RED}[ERR]{RESET} An unexpected Python error occurred: {e}", file=sys.stderr)
+        # import traceback; traceback.print_exc() # Uncomment for debugging
+    finally:
+        print("--- End Log ---")
+        print(f"{GREY}Closing connection.{RESET}")
+        sock.close()
+
+    return operation_completed_successfully
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Refresh ManiaScripts via Openplanet Socket")
+    parser.add_argument("--extra", action="store_true", help="Use extra refresh mode")
+    parser.add_argument("--filter", action="store_true", help="Filter folders based on .refreshignore")
+    parser.add_argument("--title", action="store_true", help="Only refresh title scripts (requires --filter)")
+    args = parser.parse_args()
+
+    if args.title and not args.filter:
+        print(f"{YELLOW}[WRN]{RESET} --title typically requires --filter. Enabling --filter.")
+        args.filter = True
+
+    if send_refresh_command(args.extra, args.filter, args.title):
+        print(f"\n{GREEN}Operation reported success.{RESET}")
+        sys.exit(0)
+    else:
+        print(f"\n{RED}Operation failed or did not report success.{RESET}")
+        sys.exit(1)

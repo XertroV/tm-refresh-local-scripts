@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+      {
+          "label": "MP4: Refresh ALL (Basic)",
+          "type": "shell",
+          "command": "python",
+          "args": ["refresh_scripts.py"],
+          "group": "build",
+          "presentation": { "reveal": "always", "panel": "shared" }
+      },
+      {
+          "label": "MP4: Refresh ALL (Extra)",
+          "type": "shell",
+          "command": "python",
+           "args": ["refresh_scripts.py", "--extra"],
+          "group": "build",
+          "presentation": { "reveal": "always", "panel": "shared" }
+      },
+      {
+          "label": "MP4: Refresh ALL (Filtered Title+Extra)",
+          "type": "shell",
+          "command": "python",
+          "args": ["refresh_scripts.py", "--extra", "--filter", "--title"],
+          "group": "build",
+          "presentation": { "reveal": "always", "panel": "shared" }
+      }
+  ]
+}
