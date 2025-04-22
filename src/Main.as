@@ -89,7 +89,7 @@ void LoadIgnorePatternsAndRefresh() {
 }
 
 void RefreshLocalScriptFiles() {
-    ResetCount()
+    ResetCount();
     if (g_DoExtra) { trace("DOING EXTRA"); SendClientLog("DOING EXTRA"); }
     if (g_DoTitle) { trace("DOING TITLE ONLY"); SendClientLog("DOING TITLE ONLY"); }
     try {
