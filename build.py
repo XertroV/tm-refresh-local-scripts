@@ -88,14 +88,6 @@ def windows_to_linux_path(path):
     
     prefix = os.path.normpath(WINEPREFIX)
     
-    if os.path.basename(prefix) != "drive_c":
-        print(f"\033[31mError: WINEPREFIX must end with drive_c folder: {pprefix}\033[0m")
-        sys.exit(1)
-    
-    if not prefix.startswith("/"):
-        print(f"\033[31mError: WINEPREFIX is not a valid Linux path (must start with /): {prefix}\033[0m")
-        sys.exit(1)
-    
     if ":" in path:
         path = path.split(":", 1)[1]
     
