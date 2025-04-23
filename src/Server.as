@@ -40,8 +40,7 @@ void SendClientSuccess(const string &in successMessage, uint files, uint folders
     SendClientMessage(msg);
 }
 
-
-void Main() {
+void InitializeServer() {
     if (g_socket !is null) {
         g_socket.Close();
         @g_socket = null;
@@ -58,25 +57,26 @@ void Main() {
         error("Failed to start socket server on port " + g_port);
         return;
     }
-    while (g_socketInitialized && g_socket !is null) {
-        yield();
-        Net::Socket@ client = g_socket.Accept();
-        if (client !is null) {
-            if (g_activeClient !is null) {
-                trace("Busy handling another client. Closing new connection.");
-                Json::Value busyResponse = Json::Object();
-                busyResponse["status"] = "error";
-                busyResponse["message"] = "Server busy, please try again later.";
-                client.Write(Json::Write(busyResponse));
-                client.Close();
-            } else {
-                trace("Client connected.");
-                @g_activeClient = client;
-                startnew(HandleClient, client);
-            }
+}
+
+void UpdateServer() {
+    if (!g_socketInitialized || g_socket is null) return;
+    
+    Net::Socket@ client = g_socket.Accept();
+    if (client !is null) {
+        if (g_activeClient !is null) {
+            trace("Busy handling another client. Closing new connection.");
+            Json::Value busyResponse = Json::Object();
+            busyResponse["status"] = "error";
+            busyResponse["message"] = "Server busy, please try again later.";
+            client.Write(Json::Write(busyResponse));
+            client.Close();
+        } else {
+            trace("Client connected.");
+            @g_activeClient = client;
+            startnew(HandleClient, client);
         }
     }
-    trace("Socket server loop ended.");
 }
 
 void HandleClient(ref@ userdata) {
@@ -147,17 +147,8 @@ void HandleClient(ref@ userdata) {
     trace("Client disconnected");
 }
 
-void OnDestroyed() {
+void ServerShutdown() {
     g_socketInitialized = false;
-    _Unload();
-}
-
-void OnDisabled() {
-    g_socketInitialized = false;
-    _Unload();
-}
-
-void _Unload() {
     g_ClientConnected = false;
     if (g_activeClient !is null) {
         g_activeClient.Close();

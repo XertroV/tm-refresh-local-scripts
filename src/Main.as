@@ -1,7 +1,21 @@
 bool g_DoExtra = false;
 bool g_DoFilter = false;
 bool g_DoTitle = false;
+bool g_TitleLoaded = false;
 array<string> g_RefreshIgnorePatterns;
+CGameManiaPlanet@ app;
+
+void Main() {
+    @app = cast<CGameManiaPlanet@>(GetApp());
+    while (true) {
+        yield();
+        g_TitleLoaded = (app !is null && app.LoadedManiaTitle !is null);
+        
+        if (g_TitleLoaded && (!g_socketInitialized || g_socket is null)) InitializeServer();
+        if (g_socketInitialized && g_socket !is null) UpdateServer();
+        if (!g_TitleLoaded) ServerShutdown();
+    }
+}
 
 void RenderMenu() {
     if (UI::MenuItem("Reload .Script.txt Files")) {
@@ -25,19 +39,15 @@ void RenderMenu() {
 }
 
 void LoadIgnorePatternsAndRefresh() {
-    auto app = cast<CGameManiaPlanet@>(GetApp());
-    string titleId = "";
-    if (app !is null && app.LoadedManiaTitle !is null) {
-        titleId = app.LoadedManiaTitle.IdName;
-        string logMsg = "Current loaded title ID: " + titleId;
-        trace(logMsg);
-        SendClientLog(logMsg);
-    } else {
-        string errMsg = "No title loaded.";
-        trace(errMsg);
-        SendClientError(errMsg);
+    if (!g_TitleLoaded) {
+        trace("No title loaded, cannot load ignore patterns");
         return;
     }
+    string titleId = app.LoadedManiaTitle.IdName;
+    string logMsg = "Current loaded title ID: " + titleId;
+    trace(logMsg);
+    SendClientLog(logMsg);
+
     auto titleFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("WorkTitles/" + titleId));
     if (titleFolder is null) {
         string errMsg = "Title folder not found: WorkTitles/" + titleId;
@@ -84,6 +94,7 @@ void LoadIgnorePatternsAndRefresh() {
          string warnMsg = "No .refreshignore file found in title folder";
          trace(warnMsg);
          SendClientLog("WARN: " + warnMsg);
+         return;
     }
     RefreshLocalScriptFiles();
 }
@@ -95,24 +106,15 @@ void RefreshLocalScriptFiles() {
     try {
         auto userFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("Scripts"));
         auto titlesFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("WorkTitles"));
+        
         if (!g_DoTitle) {
-             if (userFolder !is null) {
-                 Fids::UpdateTree(userFolder);
-                 RefreshLocalScriptFolder(userFolder);
-             } else {
-                  string errMsg = "User Scripts folder not found.";
-                  trace(errMsg);
-                  SendClientError(errMsg);
-             }
+            Fids::UpdateTree(userFolder);
+            RefreshLocalScriptFolder(userFolder);
         }
-        if (titlesFolder !is null) {
-             Fids::UpdateTree(titlesFolder);
-             RefreshLocalScriptFolder(titlesFolder);
-        } else {
-             string errMsg = "WorkTitles folder not found.";
-             trace(errMsg);
-             SendClientError(errMsg);
-        }
+        
+        Fids::UpdateTree(titlesFolder);
+        RefreshLocalScriptFolder(titlesFolder);
+        
         string summary = "Refreshed " + countFiles + " scripts while traversing " + countFolders + " folders.";
         NotifySuccess(summary);
         SendClientSuccess(summary, countFiles, countFolders);
@@ -203,4 +205,16 @@ void CountFolder() {
 void ResetCount() {
     countFiles = 0;
     countFolders = 0;
+}
+
+void OnDestroyed() {
+    _Unload();
+}
+
+void OnDisabled() {
+    _Unload();
+}
+
+void _Unload() {
+    ServerShutdown();
 }
