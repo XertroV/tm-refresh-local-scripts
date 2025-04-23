@@ -3,14 +3,14 @@ bool g_DoFilter = false;
 bool g_DoTitle = false;
 bool g_TitleLoaded = false;
 array<string> g_RefreshIgnorePatterns;
-CGameManiaPlanet@ app;
+CTrackMania@ app;
 
 void Main() {
-    @app = cast<CGameManiaPlanet@>(GetApp());
+    @app = cast<CTrackMania@>(GetApp());
+    
     while (true) {
         yield();
-        g_TitleLoaded = (app !is null && app.LoadedManiaTitle !is null);
-        
+        g_TitleLoaded = (app.LoadedManiaTitle !is null);
         if (g_TitleLoaded && (!g_socketInitialized || g_socket is null)) InitializeServer();
         if (g_socketInitialized && g_socket !is null) UpdateServer();
         if (!g_TitleLoaded) ServerShutdown();
