@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+      {
+        "label": "MP4: Build & Reload as Folder",
+        "type": "shell",
+        "command": "python build.py --type folder --op mp4",
+        "group": "build",
+        "presentation": {
+            "reveal": "always",
+            "panel": "shared"
+        }
+    },
+    {
+        "label": "MP4: Build & Reload as .op file",
+        "type": "shell",
+        "command": "python build.py --type op --op mp4",
+        "group": "build",
+        "presentation": {
+            "reveal": "always",
+            "panel": "shared"
+        }
+    }
+  ]
+}
