@@ -29,7 +29,7 @@ def process_message(msg):
             message = message[11:].lstrip()
         elif message.startswith("Refreshing scripts in"):
             prefix = f"{GREY}[ DIR]{RESET}"
-            message = message[22:].lstrip()
+            message = message[21:].lstrip()
         print(f" {prefix} {message}")
     elif status == "filter":
         pattern = msg.get("pattern")
@@ -43,35 +43,32 @@ def process_message(msg):
         message = msg.get("message", "")
         files = msg.get('files', 'N/A')
         folders = msg.get('folders', 'N/A')
-        print(f" {GREEN}[SUCCESS]{RESET} {message} (Files: {files}, Folders: {folders})")
         
         if _filter_patterns:
             unique_patterns = sorted(set(_filter_patterns))
             patterns_str = ', '.join(f'"{p}"' for p in unique_patterns)
             
-            print(f"\n{YELLOW}[FILTERS]{RESET} [{patterns_str}]")
+            print(f"\n {YELLOW}[FILTERS]{RESET} [{patterns_str}]")
             for folder in _filtered_folders:
-                print(f"{folder}")
+                print(f" {folder}")
             
             _filter_patterns.clear()
             _filtered_folders.clear()
+
+        print(f"\n {GREEN}[SUCCESS]{RESET} {message} (Files: {files}, Folders: {folders})")
     else:
-        print(f" {YELLOW}[???]{RESET} Unknown message status '{status}': {msg}")
+        print(f"\n {YELLOW}[???]{RESET} Unknown message status '{status}': {msg}")
 
 def send_refresh_command(extra=False, filter=False, title=False):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(60.0)
     operation_completed_successfully = False
     try:
-        print(f"{GREY}Connecting to localhost:{PORT}...{RESET}")
         sock.connect(("localhost", PORT))
-        print(f"{GREEN}Connected.{RESET}")
 
         command = {"command": "refresh", "extra": extra, "filter": filter, "title": title}
         command_bytes = json.dumps(command).encode('utf-8')
         sock.sendall(command_bytes)
-        print(f"{GREY}Command sent: {command}{RESET}")
-        print("--- Refresh Log ---")
 
         while True:
             hdr_bytes = sock.recv(4)
@@ -121,12 +118,9 @@ def send_refresh_command(extra=False, filter=False, title=False):
         print(f"{RED}[ERR]{RESET} An unexpected Python error occurred: {e}", file=sys.stderr)
         # import traceback; traceback.print_exc() # Uncomment for debugging
     finally:
-        print("--- End Log ---")
-        print(f"{GREY}Closing connection.{RESET}")
         sock.close()
 
     return operation_completed_successfully
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Refresh ManiaScripts via Openplanet Socket")
