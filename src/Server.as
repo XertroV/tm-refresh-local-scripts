@@ -96,7 +96,7 @@ void HandleClient(ref@ userdata) {
     }
 
     g_ClientConnected = true;
-    trace("HandleClient started. g_ClientConnected = true.");
+    trace("Socket client connected.");
     bool commandProcessed = false;
 
     while (g_ClientConnected) {
@@ -152,7 +152,7 @@ void HandleClient(ref@ userdata) {
          @g_activeClient = null;
     }
     client.Close();
-    trace("Client disconnected");
+    trace("Socket client disconnected.");
 }
 
 void ServerShutdown() {
