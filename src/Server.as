@@ -1,7 +1,10 @@
 Net::Socket@ g_socket = null;
-int g_port = 30005;
-bool g_socketInitialized = false;
 Net::Socket@ g_activeClient = null;
+
+[Setting category="General" name="Socket Connection Port" description="Port used by the plugin to listen on a TCP socket. If changed the plugin will need to be restarted."]
+int SocketPort = 30005;
+
+bool g_socketInitialized = false;
 bool g_ClientConnected = false;
 
 
@@ -58,11 +61,11 @@ void InitializeServer() {
         error("Failed to create socket");
         return;
     }
-    if (g_socket.Listen("localhost", g_port)) {
+    if (g_socket.Listen("localhost", SocketPort)) {
         g_socketInitialized = true;
-        trace("Socket server listening on port " + g_port);
+        trace("Socket server listening on port " + SocketPort + " for title: " + g_CurrentTitleId);
     } else {
-        error("Failed to start socket server on port " + g_port);
+        error("Failed to start socket server on port " + SocketPort);
         return;
     }
 }
@@ -119,12 +122,11 @@ void HandleClient(ref@ userdata) {
                         continue;
                     }
                     commandProcessed = true;
-                    g_DoExtra = bool(json["extra"]);
-                    g_DoFilter = bool(json["filter"]);
-                    g_DoTitle = bool(json["title"]);
-                    ResetCount();
+                    g_DoExtra = bool(json["DoExtra"]);
+                    g_DoFilter = bool(json["DoFilter"]);
+                    g_DoDevTitleOnly = bool(json["DoDevTitleOnly"]);
                     SendClientLog("Starting refresh operation...");
-                    if (g_DoFilter && g_DoTitle) {
+                    if (g_DoFilter && g_DoDevTitleOnly) {
                         LoadIgnorePatternsAndRefresh();
                     } else {
                         RefreshLocalScriptFiles();

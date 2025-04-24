@@ -55,18 +55,18 @@ def process_message(msg):
             _filter_patterns.clear()
             _filtered_folders.clear()
 
-        print(f"\n {GREEN}[SUCCESS]{RESET} {message} (Files: {files}, Folders: {folders})")
+        print(f"\n {GREEN}[SUCCESS]{RESET} {message} (Files: {files}, Folders: {folders})\n")
     else:
-        print(f"\n {YELLOW}[???]{RESET} Unknown message status '{status}': {msg}")
+        print(f"\n {YELLOW}[???]{RESET} Unknown message status '{status}': {msg}\n")
 
-def send_refresh_command(extra=False, filter=False, title=False):
+def send_refresh_command(DoExtra=False, DoFilter=False, DoDevTitleOnly=False):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(60.0)
     operation_completed_successfully = False
     try:
         sock.connect(("localhost", PORT))
 
-        command = {"command": "refresh", "extra": extra, "filter": filter, "title": title}
+        command = {"command": "refresh", "extra": DoExtra, "filter": DoFilter, "title": DoDevTitleOnly}
         command_bytes = json.dumps(command).encode('utf-8')
         sock.sendall(command_bytes)
 
@@ -124,16 +124,12 @@ def send_refresh_command(extra=False, filter=False, title=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Refresh ManiaScripts via Openplanet Socket")
-    parser.add_argument("--extra", action="store_true", help="Use extra refresh mode")
-    parser.add_argument("--filter", action="store_true", help="Filter folders based on .refreshignore")
-    parser.add_argument("--title", action="store_true", help="Only refresh title scripts (requires --filter)")
+    parser.add_argument("--DoExtra", action="store_true", help="Do extra refresh mode")
+    parser.add_argument("--DoFilter", action="store_true", help="Filter folders based on .refreshignore")
+    parser.add_argument("--DoDevTitleOnly", action="store_true", help="Only refresh title scripts in WorkTitles folder")
     args = parser.parse_args()
 
-    if args.title and not args.filter:
-        print(f"{YELLOW}[WRN]{RESET} --title typically requires --filter. Enabling --filter.")
-        args.filter = True
-
-    if send_refresh_command(args.extra, args.filter, args.title):
+    if send_refresh_command(args.DoExtra, args.DoFilter, args.DoDevTitleOnly):
         sys.exit(0)
     else:
         sys.exit(1)

@@ -1,16 +1,20 @@
 bool g_DoExtra = false;
 bool g_DoFilter = false;
-bool g_DoTitle = false;
+bool g_DoDevTitleOnly = false;
 bool g_TitleLoaded = false;
+string g_CurrentTitleId = "";
 array<string> g_RefreshIgnorePatterns;
 CTrackMania@ app;
 
 void Main() {
     @app = cast<CTrackMania@>(GetApp());
+    string folder = IO::FromUserGameFolder("WorkTitles");
     
     while (true) {
         yield();
-        g_TitleLoaded = (app.LoadedManiaTitle !is null);
+        g_CurrentTitleId = app.LoadedManiaTitle !is null ? app.LoadedManiaTitle.IdName : g_CurrentTitleId;
+        g_TitleLoaded = app.LoadedManiaTitle !is null && IO::FolderExists(folder + "\\" + g_CurrentTitleId);
+        
         if (g_TitleLoaded && (!g_socketInitialized || g_socket is null)) InitializeServer();
         if (g_socketInitialized && g_socket !is null) UpdateServer();
         if (!g_TitleLoaded) ServerShutdown();
@@ -18,25 +22,30 @@ void Main() {
 }
 
 void RenderMenu() {
-    if (UI::MenuItem("Reload .Script.txt Files")) {
-        g_DoExtra = false;
-        g_DoFilter = false;
-        g_DoTitle = false;
-        startnew(RefreshLocalScriptFiles);
-    }
-    if (UI::MenuItem("Reload .Script.txt Files (Extra)")) {
-        g_DoExtra = true;
-        g_DoFilter = false;
-        g_DoTitle = false;
-        startnew(RefreshLocalScriptFiles);
-    }
-    if (UI::MenuItem("Reload .Script.txt Files (Extra + Filter + Title)")) {
-        g_DoExtra = true;
-        g_DoFilter = true;
-        g_DoTitle = true;
-        startnew(LoadIgnorePatternsAndRefresh);
+    if (g_socket !is null) UI::TextDisabled("\\$070" + Icons::Refresh + " \\$zRefresh Local Scripts Port: " + SocketPort);
+    if (UI::BeginMenu(Icons::Refresh + " Refresh Local Scripts")) {
+        if (UI::MenuItem("Reload .Script.txt Files")) {
+            g_DoExtra = false;
+            g_DoFilter = false;
+            g_DoDevTitleOnly = false;
+            startnew(RefreshLocalScriptFiles);
+        }
+        if (UI::MenuItem("Reload .Script.txt Files (Extra)")) {
+            g_DoExtra = true;
+            g_DoFilter = false;
+            g_DoDevTitleOnly = false;
+            startnew(RefreshLocalScriptFiles);
+        }
+        if (g_TitleLoaded && UI::MenuItem("Reload .Script.txt Files (Extra + Filter + TitleOnly)")) {
+            g_DoExtra = true;
+            g_DoFilter = true;
+            g_DoDevTitleOnly = true;
+            startnew(LoadIgnorePatternsAndRefresh);
+        }
+        UI::EndMenu();
     }
 }
+
 
 void LoadIgnorePatternsAndRefresh() {
     if (!g_TitleLoaded) {
@@ -48,7 +57,7 @@ void LoadIgnorePatternsAndRefresh() {
     trace(logMsg);
     SendClientLog(logMsg);
 
-    auto titleFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("WorkTitles/" + titleId));
+    CSystemFidsFolder@ titleFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("WorkTitles/" + titleId));
     if (titleFolder is null) {
         string errMsg = "Title folder not found: WorkTitles/" + titleId;
         trace(errMsg);
@@ -102,12 +111,12 @@ void LoadIgnorePatternsAndRefresh() {
 void RefreshLocalScriptFiles() {
     ResetCount();
     if (g_DoExtra) { trace("DOING EXTRA"); SendClientLog("DOING EXTRA"); }
-    if (g_DoTitle) { trace("DOING TITLE ONLY"); SendClientLog("DOING TITLE ONLY"); }
+    if (g_DoDevTitleOnly) { trace("DOING TITLE ONLY"); SendClientLog("DOING LOADED TITLE WORKTITLES FOLDER ONLY"); }
     try {
         auto userFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("Scripts"));
         auto titlesFolder = cast<CSystemFidsFolder>(Fids::GetUserFolder("WorkTitles"));
         
-        if (!g_DoTitle) {
+        if (!g_DoDevTitleOnly) {
             Fids::UpdateTree(userFolder);
             RefreshLocalScriptFolder(userFolder);
         }

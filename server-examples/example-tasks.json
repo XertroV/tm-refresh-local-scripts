@@ -13,7 +13,7 @@
           "label": "MP4: Refresh ALL (Extra)",
           "type": "shell",
           "command": "python",
-           "args": ["refresh_scripts.py", "--extra"],
+          "args": ["refresh_scripts.py", "--DoExtra"],
           "group": "build",
           "presentation": { "reveal": "always", "panel": "shared" }
       },
@@ -21,7 +21,7 @@
           "label": "MP4: Refresh ALL (Filtered Title+Extra)",
           "type": "shell",
           "command": "python",
-          "args": ["refresh_scripts.py", "--extra", "--filter", "--title"],
+          "args": ["refresh_scripts.py", "--DoExtra", "--DoFilter", "--DoDevTitleOnly"],
           "group": "build",
           "presentation": { "reveal": "always", "panel": "shared" }
       }
