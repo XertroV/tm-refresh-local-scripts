@@ -12,7 +12,6 @@ YELLOW = '\033[93m'
 GREY = '\033[90m'
 RESET = '\033[0m'
 
-# Store patterns and folders separately
 _filter_patterns = []
 _filtered_folders = []
 
@@ -33,7 +32,6 @@ def process_message(msg):
             message = message[22:].lstrip()
         print(f" {prefix} {message}")
     elif status == "filter":
-        # Handle the dedicated filter message type
         pattern = msg.get("pattern")
         folder = msg.get("folder")
         _filter_patterns.append(pattern)
@@ -47,18 +45,14 @@ def process_message(msg):
         folders = msg.get('folders', 'N/A')
         print(f" {GREEN}[SUCCESS]{RESET} {message} (Files: {files}, Folders: {folders})")
         
-        # Print stored filter patterns after SUCCESS
         if _filter_patterns:
-            # Get unique patterns and format them for display
             unique_patterns = sorted(set(_filter_patterns))
             patterns_str = ', '.join(f'"{p}"' for p in unique_patterns)
             
             print(f"\n{YELLOW}[FILTERS]{RESET} [{patterns_str}]")
-            # Print each folder on its own line
             for folder in _filtered_folders:
                 print(f"{folder}")
             
-            # Clear the lists for next run
             _filter_patterns.clear()
             _filtered_folders.clear()
     else:
