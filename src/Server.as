@@ -60,7 +60,7 @@ void InitializeServer() {
     }
     if (g_socket.Listen("localhost", g_port)) {
         g_socketInitialized = true;
-        trace("ManiaScript refresher socket listening on port " + g_port);
+        trace("Socket server listening on port " + g_port);
     } else {
         error("Failed to start socket server on port " + g_port);
         return;
@@ -157,6 +157,9 @@ void HandleClient(ref@ userdata) {
 void ServerShutdown() {
     g_socketInitialized = false;
     g_ClientConnected = false;
+    if (g_activeClient !is null || g_socket !is null) {
+        trace("Socket server shutting down...");
+    }
     if (g_activeClient !is null) {
         g_activeClient.Close();
         @g_activeClient = null;
