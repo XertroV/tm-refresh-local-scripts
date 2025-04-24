@@ -80,7 +80,6 @@ void UpdateServer() {
             client.Write(Json::Write(busyResponse));
             client.Close();
         } else {
-            trace("Client connected.");
             @g_activeClient = client;
             startnew(HandleClient, client);
         }
