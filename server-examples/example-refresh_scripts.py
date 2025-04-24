@@ -134,8 +134,6 @@ if __name__ == "__main__":
         args.filter = True
 
     if send_refresh_command(args.extra, args.filter, args.title):
-        print(f"\n{GREEN}Operation reported success.{RESET}")
         sys.exit(0)
     else:
-        print(f"\n{RED}Operation failed or did not report success.{RESET}")
         sys.exit(1)
