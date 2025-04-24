@@ -21,6 +21,14 @@ DEFAULT_PORTS = {
     "turbo": 30002,
 }
 
+COLOR = {
+    "GREEN": '\033[92m',
+    "RED": '\033[91m',
+    "YELLOW": '\033[93m',
+    "GREY": '\033[90m',
+    "RESET": '\033[0m'
+}
+
 def copy_plugin_files(src_dir, info_toml, dest_dir):
     if os.path.exists(dest_dir):
         shutil.rmtree(dest_dir)
@@ -57,7 +65,7 @@ def send_api_request(route, data, port=30001):
         
         return json.loads(data_bytes.decode())
     except Exception as e:
-        print(f"\033[31mError calling API: {e}\033[0m")
+        print(f"{COLOR['RED']}Error calling API: {e}{COLOR['RESET']}")
         return {"error": str(e), "data": ""}
     finally:
         sock.close()
@@ -73,7 +81,7 @@ def reload_plugin(plugin_id, plugin_type, port=30001):
     data_text = response.get("data", "")
     
     if error_text != "":
-        print(f"\033[31m{error_text}\033[0m")
+        print(f"{COLOR['RED']}{error_text}{COLOR['RESET']}")
     if data_text != "":
         print(data_text)
     return error_text == ""
@@ -83,7 +91,7 @@ def windows_to_linux_path(path):
         return path
         
     if not WINEPREFIX:
-        print("\033[31mError: WINEPREFIX is empty but required on Linux\033[0m")
+        print(f"{COLOR['RED']}Error: WINEPREFIX is empty but required on Linux{COLOR['RESET']}")
         sys.exit(1)
     
     prefix = os.path.normpath(WINEPREFIX)
@@ -111,20 +119,20 @@ def main():
     data_folder = response.get("data", "")
     
     if not data_folder:
-        print("\033[31mFailed to get data folder from API\033[0m")
+        print(f"{COLOR['RED']}Failed to get data folder from API{COLOR['RESET']}")
         return
 
     base_path = windows_to_linux_path(data_folder)
     
     openplanet_log = os.path.join(base_path, "Openplanet.log")
     if not os.path.exists(openplanet_log):
-        print(f"\033[31mError: Openplanet.log not found in {base_path}, might be an incorrect path\033[0m")
+        print(f"{COLOR['RED']}Error: Openplanet.log not found in {base_path}, might be an incorrect path{COLOR['RESET']}")
         sys.exit(1)
     
     plugins_dir = os.path.join(base_path, "Plugins")
         
     if not os.path.exists(plugins_dir):
-        print(f"\033[31mPlugins directory not found: {plugins_dir}\033[0m")
+        print(f"{COLOR['RED']}Plugins directory not found: {plugins_dir}{COLOR['RESET']}")
         sys.exit(1)
     
     print(f"Using plugins directory: {plugins_dir}")
@@ -166,7 +174,7 @@ def main():
     plugin_type = "folder" if args.type == "folder" else "zip"
     
     if reload_plugin(plugin_id, plugin_type=plugin_type, port=port):
-        print("\033[32mPlugin reloaded successfully.\033[0m")
+        print(f"{COLOR['GREEN']}Plugin reloaded successfully.{COLOR['RESET']}")
         print("Build and deployment complete!")
 
 if __name__ == "__main__":

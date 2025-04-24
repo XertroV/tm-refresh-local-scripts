@@ -134,9 +134,8 @@ bool ShouldIgnoreFolder(const string &in folderPath) {
     for (uint i = 0; i < g_RefreshIgnorePatterns.Length; i++) {
         string pattern = g_RefreshIgnorePatterns[i];
         if (normalizedPath.Contains("/" + pattern) || normalizedPath.EndsWith("/" + pattern)) {
-            string logMsg = "Filtered out folder by exact pattern: " + pattern + " for path " + folderPath;
-            trace(logMsg);
-            SendClientLog(logMsg);
+            trace("Filter pattern: [" + pattern + "] applied for: " + folderPath);
+            SendClientFilter(pattern, folderPath);
             return true;
         }
     }
@@ -167,9 +166,9 @@ void RefreshLocalScriptFolder(CSystemFidsFolder@ folder) {
 }
 
 void RefreshLocalScriptFid(CSystemFidFile@ fid) {
-    string logMsgStart = "Refreshing script: " + fid.FileName;
-    trace(logMsgStart);
-    SendClientLog(logMsgStart);
+    //string logMsgStart = "Refreshing script: " + fid.FileName;
+    //trace(logMsgStart);
+    //SendClientLog(logMsgStart);
     auto text = cast<CPlugFileTextScript>(Fids::Preload(fid));
     if (text !is null) {
         try {
@@ -180,7 +179,9 @@ void RefreshLocalScriptFid(CSystemFidFile@ fid) {
                 f.Close();
             }
             CountFile();
-             SendClientLog("OK: " + fid.FileName);
+            string logMsg = "Refreshed: " + fid.FileName;
+            trace(logMsg);
+            SendClientLog(logMsg);
         } catch {
              string errMsg = "Error refreshing " + fid.FileName + ": " + getExceptionInfo();
              NotifyError(errMsg);

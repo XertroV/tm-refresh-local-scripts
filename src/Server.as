@@ -24,6 +24,14 @@ void SendClientLog(const string &in logMessage) {
     SendClientMessage(msg);
 }
 
+void SendClientFilter(const string &in pattern, const string &in folder) {
+    Json::Value msg = Json::Object();
+    msg["status"] = "filter";
+    msg["pattern"] = pattern;
+    msg["folder"] = folder;
+    SendClientMessage(msg);
+}
+
 void SendClientError(const string &in errorMessage) {
     Json::Value msg = Json::Object();
     msg["status"] = "error";
