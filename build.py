@@ -9,7 +9,7 @@ import struct
 import socket
 import platform
 
-PLUGIN_PACK = ["src", "info.toml", "README.md"] 
+PLUGIN_PACK = ["src", "info.toml", "README.md", "LICENSE", "server-examples"] 
 DIST_DIR = "dist"
 PLUGIN_ID = "refresh-local-scripts"
 
