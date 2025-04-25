@@ -161,6 +161,7 @@ void RefreshLocalScriptFolder(CSystemFidsFolder@ folder) {
             RefreshLocalScriptFid(item);
         }
     }
+    
     for (uint i = 0; i < folder.Trees.Length; i++) {
         yield();
         auto item = cast<CSystemFidsFolder>(folder.Trees[i]);
@@ -172,6 +173,7 @@ void RefreshLocalScriptFolder(CSystemFidsFolder@ folder) {
         CountFolder();
     }
 }
+
 
 void RefreshLocalScriptFid(CSystemFidFile@ fid) {
     //string logMsgStart = "Refreshing script: " + fid.FileName;
