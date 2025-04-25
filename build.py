@@ -40,10 +40,20 @@ def copy_plugin_files(plugin_pack, dest_dir):
         
         if not os.path.exists(src_item):
             print(f"{COLOR['RED']}Error: Required item not found: {src_item}{COLOR['RESET']}")
-            sys.exit(1)  # Exit with error code
+            sys.exit(1)
             
         if os.path.isdir(src_item):
-            shutil.copytree(src_item, dst_item)
+            if item == "src":
+                for src_content in os.listdir(src_item):
+                    src_content_path = os.path.join(src_item, src_content)
+                    dst_content_path = os.path.join(dest_dir, src_content)
+                    
+                    if os.path.isdir(src_content_path):
+                        shutil.copytree(src_content_path, dst_content_path)
+                    else:
+                        shutil.copy2(src_content_path, dst_content_path)
+            else:
+                shutil.copytree(src_item, dst_item)
         else:
             shutil.copy2(src_item, dst_item)
 
