@@ -61,65 +61,41 @@ def process_message(msg):
 
 def send_refresh_command(DoExtra=False, DoFilter=False, DoDevTitleOnly=False):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(60.0)
     operation_completed_successfully = False
-    try:
-        sock.connect(("localhost", PORT))
-
-        command = {"command": "refresh", "DoExtra": DoExtra, "DoFilter": DoFilter, "DoDevTitleOnly": DoDevTitleOnly}
-        command_bytes = json.dumps(command).encode('utf-8')
-        sock.sendall(command_bytes)
-
-        while True:
-            hdr_bytes = sock.recv(4)
-            if not hdr_bytes: break
-            if len(hdr_bytes) < 4:
-                print(f"{RED}[ERR]{RESET} Incomplete length header ({len(hdr_bytes)} bytes).", file=sys.stderr)
-                break
-            try:
-                (data_length,) = struct.unpack("<I", hdr_bytes)
-            except struct.error as e:
-                print(f"{RED}[ERR]{RESET} Could not unpack length header: {e}", file=sys.stderr)
-                break
-
-            data_bytes = b""
-            try:
-                while len(data_bytes) < data_length:
-                    chunk = sock.recv(min(4096, data_length - len(data_bytes)))
-                    if not chunk:
-                        raise ConnectionAbortedError("Connection closed unexpectedly while reading data")
-                    data_bytes += chunk
-            except socket.error as e:
-                 print(f"{RED}[ERR]{RESET} Socket error reading data: {e}", file=sys.stderr)
-                 break
-
-            try:
-                message_str = data_bytes.decode('utf-8')
-                response = json.loads(message_str)
-                process_message(response)
-                if response.get("status") == "success":
-                    operation_completed_successfully = True
-
-            except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                 print(f"{RED}[ERR]{RESET} Failed to decode/parse message: {e}", file=sys.stderr)
-                 print(f"{GREY} Raw data: {data_bytes!r}{RESET}", file=sys.stderr)
-                 break
-            except Exception as e:
-                 print(f"{RED}[ERR]{RESET} Error processing message: {e}", file=sys.stderr)
-                 break
-
-    except socket.timeout:
-        print(f"{RED}[ERR]{RESET} Socket timed out.", file=sys.stderr)
-    except ConnectionRefusedError:
-         print(f"{RED}[ERR]{RESET} Connection refused. Is the Openplanet script running?", file=sys.stderr)
-    except socket.error as e:
-        print(f"{RED}[ERR]{RESET} Socket Error: {e}", file=sys.stderr)
-    except Exception as e:
-        print(f"{RED}[ERR]{RESET} An unexpected Python error occurred: {e}", file=sys.stderr)
-        # import traceback; traceback.print_exc() # Uncomment for debugging
-    finally:
+    
+    connection_result = sock.connect_ex(("localhost", PORT))
+    if connection_result != 0:
+        print(f"{RED}[ERR]{RESET} Connection failed. Is the Openplanet script running?", file=sys.stderr)
         sock.close()
+        return False
+    
+    command = {"command": "refresh", "DoExtra": DoExtra, "DoFilter": DoFilter, "DoDevTitleOnly": DoDevTitleOnly}
+    command_bytes = json.dumps(command).encode('utf-8')
+    sock.sendall(command_bytes)
+    
+    while True:
+        hdr_bytes = sock.recv(4)
+        if not hdr_bytes or len(hdr_bytes) < 4:
+            break
 
+        header_result = struct.unpack("<I", hdr_bytes)
+        data_length = header_result[0]
+        
+        data_bytes = b""
+        bytes_remaining = data_length
+        while bytes_remaining > 0:
+            chunk = sock.recv(min(4096, bytes_remaining))
+            data_bytes += chunk
+            bytes_remaining = data_length - len(data_bytes)
+        
+        message_str = data_bytes.decode('utf-8')
+            
+        response = json.loads(message_str)
+        process_message(response)
+        if response.get("status") == "success":
+            operation_completed_successfully = True
+    
+    sock.close()
     return operation_completed_successfully
 
 if __name__ == "__main__":
