@@ -66,7 +66,7 @@ def send_refresh_command(DoExtra=False, DoFilter=False, DoDevTitleOnly=False):
     try:
         sock.connect(("localhost", PORT))
 
-        command = {"command": "refresh", "extra": DoExtra, "filter": DoFilter, "title": DoDevTitleOnly}
+        command = {"command": "refresh", "DoExtra": DoExtra, "DoFilter": DoFilter, "DoDevTitleOnly": DoDevTitleOnly}
         command_bytes = json.dumps(command).encode('utf-8')
         sock.sendall(command_bytes)
 

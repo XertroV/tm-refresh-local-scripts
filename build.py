@@ -9,9 +9,9 @@ import struct
 import socket
 import platform
 
-INFO_TOML = "info.toml"
-SOURCE_DIR = "src"
+PLUGIN_PACK = ["src", "info.toml", "README.md"] 
 DIST_DIR = "dist"
+PLUGIN_ID = "refresh-local-scripts"
 
 WINEPREFIX = "/mnt/secondary/Prefixes/ProtonGE9_25/drive_c/"
 
@@ -29,21 +29,25 @@ COLOR = {
     "RESET": '\033[0m'
 }
 
-def copy_plugin_files(src_dir, info_toml, dest_dir):
+def copy_plugin_files(plugin_pack, dest_dir):
     if os.path.exists(dest_dir):
         shutil.rmtree(dest_dir)
     os.makedirs(dest_dir, exist_ok=True)
-    shutil.copy2(info_toml, dest_dir)
-    if os.path.isdir(src_dir):
-        for item in os.listdir(src_dir):
-            src_item = os.path.join(src_dir, item)
-            dst_item = os.path.join(dest_dir, item)
-            if os.path.isdir(src_item):
-                shutil.copytree(src_item, dst_item)
-            else:
-                shutil.copy2(src_item, dst_item)
+    
+    for item in plugin_pack:
+        src_item = os.path.join(os.getcwd(), item)
+        dst_item = os.path.join(dest_dir, item)
+        
+        if not os.path.exists(src_item):
+            print(f"{COLOR['RED']}Error: Required item not found: {src_item}{COLOR['RESET']}")
+            sys.exit(1)  # Exit with error code
+            
+        if os.path.isdir(src_item):
+            shutil.copytree(src_item, dst_item)
+        else:
+            shutil.copy2(src_item, dst_item)
 
-def send_api_request(route, data, port=30001):
+def send_api_request(route, data, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(3.0)
     try:
@@ -70,20 +74,90 @@ def send_api_request(route, data, port=30001):
     finally:
         sock.close()
 
-def reload_plugin(plugin_id, plugin_type, port=30001):
+def reload_plugin(PLUGIN_ID, plugin_type, port):
     response = send_api_request("load_plugin", {
-        "id": plugin_id,
+        "id": PLUGIN_ID,
         "source": "user",
         "type": plugin_type
     }, port)
     
-    error_text = response.get("error", "")
-    data_text = response.get("data", "")
+    log_response = send_api_request("get_data_folder", {}, port)
+    data_folder = log_response.get("data", "")
     
-    if error_text != "":
-        print(f"{COLOR['RED']}{error_text}{COLOR['RESET']}")
-    if data_text != "":
-        print(data_text)
+    if data_folder:
+        log_path = os.path.join(windows_to_linux_path(data_folder), "Openplanet.log")
+        
+        if os.path.exists(log_path):
+            try:
+                with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    lines = f.readlines()
+                
+                relevant_logs = []
+                found_unload = False
+                unload_marker = f"Unloading plugin '{PLUGIN_ID}'"
+                
+                for line in reversed(lines):
+                    if unload_marker in line:
+                        found_unload = True
+                        relevant_logs.insert(0, line)
+                        break
+                    elif found_unload:
+                        relevant_logs.insert(0, line)
+                    else:
+                        relevant_logs.insert(0, line)
+                        if len(relevant_logs) > 30:
+                            relevant_logs.pop()
+                
+                unloaded = False
+                loaded = False
+                compilation_failed = False
+                
+                for line in relevant_logs:
+                    if f"Unloading plugin '{PLUGIN_ID}'" in line:
+                        unloaded = True
+                    if f"Loaded plugin '{PLUGIN_ID}'" in line or f"Loaded zipped plugin '{PLUGIN_ID}'" in line:
+                        loaded = True
+                    if "Script compilation failed!" in line:
+                        compilation_failed = True
+                
+                print(f"\n{COLOR['GREY']}--- Relevant Log Output ---{COLOR['RESET']}")
+                import re
+                for line in relevant_logs:
+                    original_line = line
+                    line = line.strip()
+                    
+                    prefixes_to_remove = [
+                        "[    ScriptEngine]",
+                        "[    ScriptRuntime]",
+                        f" [{PLUGIN_ID}] ",
+                        " [RemoteBuild] "
+                    ]
+                    
+                    for prefix in prefixes_to_remove:
+                        if prefix in line:
+                            line = line.replace(prefix, "")
+                    
+                    line = re.sub(r'\[\d{2}:\d{2}:\d{2}\]', '', line)
+                    line = line.strip()
+                    
+                    if "[ERROR]" in original_line:
+                        print(f"{COLOR['RED']}{line}{COLOR['RESET']}")
+                    elif "[ WARN]" in original_line:
+                        print(f"{COLOR['YELLOW']}{line}{COLOR['RESET']}")
+                    else:
+                        print(line)
+                print(f"{COLOR['GREY']}--- End Log Output ---{COLOR['RESET']}\n")
+                
+                if unloaded and loaded:
+                    if not compilation_failed:
+                        print(f"{COLOR['GREEN']}Plugin deployment and reload successful.{COLOR['RESET']}")
+                    if compilation_failed:
+                        print(f"{COLOR['RED']}Plugin deployment completed but script compilation failed.{COLOR['RESET']}")
+                
+            except Exception as e:
+                print(f"{COLOR['RED']}Error reading log: {e}{COLOR['RESET']}")
+    
+    error_text = response.get("error", "")
     return error_text == ""
 
 def windows_to_linux_path(path):
@@ -109,9 +183,6 @@ def main():
     parser.add_argument("--op", choices=list(DEFAULT_PORTS.keys()), required=True, help="Target Openplanet")
     args = parser.parse_args()
     
-    plugin_id = os.path.basename(os.getcwd())
-    src_dir = os.path.join(os.getcwd(), SOURCE_DIR)
-    info_toml = os.path.join(os.getcwd(), INFO_TOML)
     dist_dir = os.path.join(os.getcwd(), DIST_DIR)
     port = DEFAULT_PORTS[args.op]
     
@@ -138,11 +209,11 @@ def main():
     print(f"Using plugins directory: {plugins_dir}")
     
     os.makedirs(dist_dir, exist_ok=True)
-    op_file_path = os.path.join(dist_dir, f"{plugin_id}.op")
-    dest_op_file = os.path.join(plugins_dir, f"{plugin_id}.op")
-    dest_folder = os.path.join(plugins_dir, plugin_id)
+    op_file_path = os.path.join(dist_dir, f"{PLUGIN_ID}.op")
+    dest_op_file = os.path.join(plugins_dir, f"{PLUGIN_ID}.op")
+    dest_folder = os.path.join(plugins_dir, PLUGIN_ID)
     
-    print(f"Building {plugin_id} as {'folder' if args.type == 'folder' else '.op file'}")
+    print(f"Building {PLUGIN_ID} as {'folder' if args.type == 'folder' else '.op file'}")
     
     if args.type == "folder":
         if os.path.exists(dest_op_file):
@@ -150,14 +221,14 @@ def main():
             os.remove(dest_op_file)
         
         print(f"Deploying as folder to: {dest_folder}")
-        copy_plugin_files(src_dir, info_toml, dest_folder)
+        copy_plugin_files(PLUGIN_PACK, dest_folder)
     else:
         if os.path.exists(dest_folder):
             print(f"Removing existing folder: {dest_folder}")
             shutil.rmtree(dest_folder)
         
         temp_dir = os.path.join(dist_dir, "temp")
-        copy_plugin_files(src_dir, info_toml, temp_dir)
+        copy_plugin_files(PLUGIN_PACK, temp_dir)
         
         with zipfile.ZipFile(op_file_path, 'w', compression=zipfile.ZIP_DEFLATED) as zipf:
             for root, _, files in os.walk(temp_dir):
@@ -173,9 +244,7 @@ def main():
     print(f"Reloading plugin using port {port}...")
     plugin_type = "folder" if args.type == "folder" else "zip"
     
-    if reload_plugin(plugin_id, plugin_type=plugin_type, port=port):
-        print(f"{COLOR['GREEN']}Plugin reloaded successfully.{COLOR['RESET']}")
-        print("Build and deployment complete!")
+    reload_plugin(PLUGIN_ID, plugin_type=plugin_type, port=port)
 
 if __name__ == "__main__":
     main()

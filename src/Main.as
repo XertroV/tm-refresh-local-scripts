@@ -8,12 +8,11 @@ CTrackMania@ app;
 
 void Main() {
     @app = cast<CTrackMania@>(GetApp());
-    string folder = IO::FromUserGameFolder("WorkTitles");
     
     while (true) {
         yield();
         g_CurrentTitleId = app.LoadedManiaTitle !is null ? app.LoadedManiaTitle.IdName : g_CurrentTitleId;
-        g_TitleLoaded = app.LoadedManiaTitle !is null && IO::FolderExists(folder + "\\" + g_CurrentTitleId);
+        g_TitleLoaded = app.LoadedManiaTitle !is null && app.ManiaTitleEditionScriptAPI !is null;
         
         if (g_TitleLoaded && (!g_socketInitialized || g_socket is null)) InitializeServer();
         if (g_socketInitialized && g_socket !is null) UpdateServer();
