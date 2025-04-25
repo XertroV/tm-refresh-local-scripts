@@ -100,57 +100,119 @@ void HandleClient(ref@ userdata) {
     g_ClientConnected = true;
     trace("Socket client connected.");
     bool commandProcessed = false;
-
+    
+    yield();
+    
     while (g_ClientConnected) {
-        yield();
         int bytes = client.Available();
-        if (bytes > 0) {
-            string data = client.ReadRaw(bytes);
-            Json::Value@ json;
-            try {
-               @json = Json::Parse(data);
-            } catch {
-                string errMsg = "Failed to parse JSON command: " + getExceptionInfo();
-                trace("Client Error: " + errMsg);
-                SendClientError(errMsg);
-                continue;
-            }
-            if (json !is null) {
-                string command = json["command"];
-                if (command == "refresh") {
-                    if(commandProcessed) {
-                        continue;
-                    }
-                    commandProcessed = true;
-                    g_DoExtra = bool(json["DoExtra"]);
-                    g_DoFilter = bool(json["DoFilter"]);
-                    g_DoDevTitleOnly = bool(json["DoDevTitleOnly"]);
-                    SendClientLog("Starting refresh operation...");
-                    if (g_DoFilter && g_DoDevTitleOnly) {
-                        LoadIgnorePatternsAndRefresh();
-                    } else {
-                        RefreshLocalScriptFiles();
-                    }
-                    break; 
-                } else {
-                     string errMsg = "Unknown command: " + command;
-                     trace("Client Error: " + errMsg);
-                     SendClientError(errMsg);
-                }
-            } else {
-                string errMsg = "Received data could not be parsed into a valid JSON object.";
-                trace("Client Error: " + errMsg);
-                SendClientError(errMsg);
-            }
-        } else {
-             if (commandProcessed) {
-                break;
-            }
+        if (bytes <= 0) {
+            trace("No command received. Closing connection.");
+            break;
+        }
+
+        string data = client.ReadRaw(bytes);
+        Json::Value@ json = ParseClientData(data);
+        if (json is null) {
+            trace("JSON validation failed. Closing connection.");
+            break;
+        }
+
+        ProcessCommand(json, commandProcessed);
+        break;
+    }
+
+    CloseClientConnection(client);
+}
+
+Json::Value@ ParseClientData(const string &in data) {
+    Json::Value@ json = Json::Parse(data);
+    
+    if (json is null || json.GetType() != Json::Type::Object) {
+        SendClientError("Invalid JSON: Must be an object");
+        return null;
+    }
+    
+    if (!json.HasKey("command") || json["command"].GetType() != Json::Type::String) {
+        SendClientError("Invalid JSON: Missing or invalid 'command' field");
+        return null;
+    }
+    
+    string command = string(json["command"]);
+    
+    if (command == "refresh") {
+        if (!ValidateRefreshParams(json)) {
+            return null;
         }
     }
+    trace(Json::Write(json, true));
+    return json;
+}
+
+bool ValidateRefreshParams(Json::Value@ json) {
+    array<string> allowedParams = {"DoExtra", "DoFilter", "DoDevTitleOnly"};
+    dictionary params;
+    
+    for (uint i = 0; i < allowedParams.Length; i++) {
+        params[allowedParams[i]] = true;
+    }
+    
+    array<string> keys = json.GetKeys();
+    for (uint i = 0; i < keys.Length; i++) {
+        if (keys[i] == "command") continue;
+        
+        if (!params.Exists(keys[i])) {
+            SendClientError("Unknown parameter: " + keys[i]);
+            return false;
+        }
+        
+        if (json[keys[i]].GetType() != Json::Type::Boolean) {
+            SendClientError("Parameter must be boolean: " + keys[i]);
+            return false;
+        }
+    }
+    
+    for (uint i = 0; i < allowedParams.Length; i++) {
+        if (!json.HasKey(allowedParams[i])) {
+            json[allowedParams[i]] = false;
+        }
+    }
+    
+    return true;
+}
+
+
+
+bool ProcessCommand(Json::Value@ json, bool &out commandProcessed) {
+    string command = string(json["command"]);
+    
+    if (command == "refresh") {
+        if (commandProcessed) return false;
+        
+        commandProcessed = true;
+        g_DoExtra = bool(json["DoExtra"]);
+        g_DoFilter = bool(json["DoFilter"]);
+        g_DoDevTitleOnly = bool(json["DoDevTitleOnly"]);
+        
+        SendClientLog("Starting refresh operation...");
+        if (g_DoFilter && g_DoDevTitleOnly) {
+            LoadIgnorePatternsAndRefresh();
+        } else {
+            RefreshLocalScriptFiles();
+        }
+        
+        return true;
+    } else {
+        string errMsg = "Unknown command: " + command;
+        trace("Client Error: " + errMsg);
+        SendClientError(errMsg);
+        return false;
+    }
+}
+
+void CloseClientConnection(Net::Socket@ client) {
     g_ClientConnected = false;
     if (g_activeClient is client) {
-         @g_activeClient = null;
+        @g_activeClient = null;
     }
     client.Close();
     trace("Socket client disconnected.");

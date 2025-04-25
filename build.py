@@ -128,7 +128,7 @@ def reload_plugin(PLUGIN_ID, plugin_type, port):
                     
                     prefixes_to_remove = [
                         "[    ScriptEngine]",
-                        "[    ScriptRuntime]",
+                        "[   ScriptRuntime]",
                         f" [{PLUGIN_ID}] ",
                         " [RemoteBuild] "
                     ]
